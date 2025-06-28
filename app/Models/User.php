@@ -21,7 +21,15 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'xp',
+        'is_admin',
+        'is_moderator',
+        'is_manager',
+        'last_login_at',
+        'reports_count',
+        'is_suspended',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -48,5 +56,13 @@ class User extends Authenticatable
     public function gameSessions()
     {
         return $this->hasMany(GameSession::class);
+    }
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
+    }
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
     }
 }
