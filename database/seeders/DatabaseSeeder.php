@@ -3,7 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Game;
+use App\Models\Level;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -24,5 +25,29 @@ class DatabaseSeeder extends Seeder
                 'password' => bcrypt('admin123'),
             ]
         );
+
+        Game::insert([
+            [
+                'title' => 'Kings Cup',
+                'type' => 'card',
+                'description' => 'Classic card-based drinking game',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'title' => 'Lord of the Rings',
+                'type' => 'movie',
+                'description' => 'Drink every time someone says “ring”',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'title' => 'Mario Kart Drinking',
+                'type' => 'video',
+                'description' => 'Winner drinks water, loser drinks booze!',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
     }
 }
