@@ -3,48 +3,36 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
-
 use Inertia\Inertia;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\AdminDashboardController;
 
 use App\Models\User;
 use App\Models\Game;
 use App\Models\Activity;
 
-Route::get('/', function () {
-    return Inertia::render('Home');
-})->name('home');
+Route::get('/', fn() => Inertia::render('Home'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('Dashboard'))->name('dashboard');
-
     Route::resource('games', GameController::class);
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        return Inertia::render('Admin/Dashboard', [
-            'users' => User::count(),
-            'games' => Game::count(),
-            'xpTotal' => User::sum('xp'),
-        ]);
-    })->name('dashboard');
+    Route::get('/', AdminDashboardController::class)->name('dashboard');
 
     Route::get('/users', function (Request $request) {
         $search = $request->input('search');
 
         $users = User::query()
-            ->when(
-                $search,
-                fn($query) =>
+            ->when($search, fn($query) =>
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
             )
             ->select('id', 'name', 'email', 'xp', 'reports_count', 'is_admin', 'is_moderator', 'is_manager', 'is_suspended', 'created_at', 'last_login_at')
             ->orderBy('created_at', 'desc')
@@ -53,9 +41,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
 
         return Inertia::render('Admin/Users', [
             'users' => $users,
-            'filters' => [
-                'search' => $search,
-            ],
+            'filters' => ['search' => $search],
         ]);
     })->name('users.index');
 
@@ -69,9 +55,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
         return Inertia::render('Admin/UserActivity', [
             'user' => $user->only('id', 'name', 'email'),
             'activities' => $activities,
-            'filters' => [
-                'date' => $request->date,
-            ],
+            'filters' => ['date' => $request->date],
         ]);
     })->name('users.activity');
 
