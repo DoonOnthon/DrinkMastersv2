@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         User::factory(10)->create();
 
+        $this->call(ActivitySeeder::class);
+
         $this->call(LevelSeeder::class);
 
         User::firstOrCreate(
@@ -23,8 +25,17 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'password' => bcrypt('admin123'),
+                'is_admin' => true,
             ]
         );
+
+        User::factory()->create([
+            'name' => 'Troll McSpam',
+            'email' => 'troll@example.com',
+            'xp' => 42,
+            'reports_count' => 3,
+        ]);
+
 
         Game::insert([
             [
