@@ -2,11 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
+
 use Inertia\Inertia;
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GameController;
-use App\Http\Controllers\AdminUserController;
 
 use App\Models\User;
 use App\Models\Game;
@@ -45,7 +46,7 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
             )
-            ->select('id', 'name', 'email', 'xp', 'reports_count', 'is_admin', 'is_moderator', 'is_manager', 'is_suspended', 'created_at', 'last_login_at') // ✅ ADDED last_login_at
+            ->select('id', 'name', 'email', 'xp', 'reports_count', 'is_admin', 'is_moderator', 'is_manager', 'is_suspended', 'created_at', 'last_login_at')
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
@@ -57,6 +58,50 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
             ],
         ]);
     })->name('users.index');
+
+    Route::get('/users/{user}/activity', function (Request $request, User $user) {
+        $activities = $user->activities()
+            ->when($request->date, fn($query, $date) => $query->whereDate('created_at', $date))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render('Admin/UserActivity', [
+            'user' => $user->only('id', 'name', 'email'),
+            'activities' => $activities,
+            'filters' => [
+                'date' => $request->date,
+            ],
+        ]);
+    })->name('users.activity');
+
+    Route::get('/users/{user}/activity/export', function (User $user, Request $request) {
+        $filename = "activity_user_{$user->id}.csv";
+
+        $activities = $user->activities()
+            ->when($request->date, fn($query, $date) => $query->whereDate('created_at', $date))
+            ->latest()
+            ->get(['description', 'created_at', 'type']);
+
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename=\"$filename\""];
+
+        $callback = function () use ($activities) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Description', 'Type', 'Created At']);
+
+            foreach ($activities as $activity) {
+                fputcsv($handle, [
+                    $activity->description,
+                    $activity->type,
+                    $activity->created_at->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return Response::stream($callback, 200, $headers);
+    })->name('users.activity.export');
 
     Route::post('/users/{user}/toggle-role', function (Request $request, User $user) {
         $role = $request->input('role');
@@ -82,18 +127,6 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
 
         return back();
     })->name('users.toggleSuspend');
-
-    Route::get('/users/{user}/activity', function (User $user) {
-        $activities = $user->activities()
-            ->latest()
-            ->take(20)
-            ->get(['id', 'description', 'created_at']);
-
-        return Inertia::render('Admin/UserActivity', [
-            'user' => $user->only('id', 'name', 'email'),
-            'activities' => $activities,
-        ]);
-    })->name('users.activity');
 });
 
 require __DIR__ . '/auth.php';

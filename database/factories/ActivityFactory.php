@@ -21,6 +21,7 @@ class ActivityFactory extends Factory
                 'Made a purchase',
                 'Sent feedback',
             ]),
+            'type' => fake()->randomElement(['user', 'system']),
             'created_at' => fake()->dateTimeBetween('-2 months', 'now'),
             'updated_at' => now(),
         ];
