@@ -44,6 +44,9 @@
 </template>
 
 <script setup>
+import AppLayout from '@/Layouts/AppLayout.vue'
+defineOptions({ layout: AppLayout })
+
 const props = defineProps({ games: Array })
 
 import { ref, computed } from 'vue'
@@ -56,15 +59,14 @@ const icons = {
   video: '🎮',
 }
 
-const safeGames = props.games || []
-
 const filteredGames = computed(() => {
+  const safeGames = props.games || []
   return filterType.value === 'all'
-    ? props.games
-    : props.games.filter((g) => g.type === filterType.value)
+    ? safeGames
+    : safeGames.filter((g) => g.type === filterType.value)
 })
-
 </script>
+
 
 <style scoped>
 @keyframes fade-in {
