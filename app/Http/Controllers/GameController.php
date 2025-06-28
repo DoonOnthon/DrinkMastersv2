@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Game;
+use App\Models\Card;
+
 use Inertia\Inertia;
 
 class GameController extends Controller
@@ -37,6 +39,20 @@ class GameController extends Controller
     {
         return Inertia::render('Games/Edit', [
             'game' => $game
+        ]);
+    }
+
+    public function cards($id)
+    {
+        $game = Game::with('cards')->findOrFail($id);
+        return response()->json($game->cards);
+    }
+    public function play($id)
+    {
+        $game = Game::findOrFail($id);
+
+        return Inertia::render('Games/Play', [
+            'game' => $game,
         ]);
     }
 

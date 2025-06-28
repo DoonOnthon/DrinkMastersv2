@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Rule;
 use App\Models\GameSession;
+use App\Models\Card;
 
 class Game extends Model
 {
@@ -16,6 +17,10 @@ class Game extends Model
     public function rules()
     {
         return $this->hasMany(Rule::class);
+    }
+    public function cards()
+    {
+        return $this->hasMany(Card::class);
     }
 
     public function sessions()

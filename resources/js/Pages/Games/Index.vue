@@ -32,11 +32,18 @@
           <div class="flex items-center justify-between mb-2">
             <h2 class="text-xl font-bold text-gray-800">{{ game.title }}</h2>
             <span class="text-2xl">
-              {{ icons[game.type] }}
+              {{ icons[game.type] || '❓' }}
             </span>
           </div>
           <p class="text-gray-500 text-sm mb-2 capitalize">{{ game.type }}</p>
           <p class="text-gray-600 text-sm">{{ game.description }}</p>
+
+          <Link
+            :href="`/games/${game.id}/play`"
+            class="mt-2 inline-block text-sm text-blue-600 hover:underline"
+          >
+            ▶️ Play
+          </Link>
         </div>
       </div>
     </div>
@@ -45,11 +52,12 @@
 
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
+import { Link } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+
 defineOptions({ layout: AppLayout })
 
 const props = defineProps({ games: Array })
-
-import { ref, computed } from 'vue'
 
 const filterType = ref('all')
 const types = ['all', 'card', 'movie', 'video']
@@ -66,7 +74,6 @@ const filteredGames = computed(() => {
     : safeGames.filter((g) => g.type === filterType.value)
 })
 </script>
-
 
 <style scoped>
 @keyframes fade-in {

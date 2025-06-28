@@ -16,9 +16,10 @@ class DatabaseSeeder extends Seeder
     {
         User::factory(10)->create();
 
-        $this->call(ActivitySeeder::class);
 
-        $this->call(LevelSeeder::class);
+        $this->call([
+            CardSeeder::class,
+        ]);
 
         User::firstOrCreate(
             ['email' => 'admin@admin.nl'],

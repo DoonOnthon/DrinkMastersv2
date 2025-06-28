@@ -17,7 +17,12 @@ Route::get('/', fn() => Inertia::render('Home'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('Dashboard'))->name('dashboard');
+
+    // ✅ Public game routes for authenticated users
     Route::resource('games', GameController::class);
+    Route::get('/games/{id}/play', [GameController::class, 'play'])->name('games.play');
+    Route::get('/games/{id}/cards', [GameController::class, 'cards']);
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -30,9 +35,11 @@ Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(
         $search = $request->input('search');
 
         $users = User::query()
-            ->when($search, fn($query) =>
+            ->when(
+                $search,
+                fn($query) =>
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
             )
             ->select('id', 'name', 'email', 'xp', 'reports_count', 'is_admin', 'is_moderator', 'is_manager', 'is_suspended', 'created_at', 'last_login_at')
             ->orderBy('created_at', 'desc')
