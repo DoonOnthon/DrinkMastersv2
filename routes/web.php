@@ -8,26 +8,41 @@ use Inertia\Inertia;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\PlaySessionController;
 
 use App\Models\User;
 use App\Models\Game;
 use App\Models\Activity;
 
+// 🏠 Public features
 Route::get('/', fn() => Inertia::render('Home'))->name('home');
 
+// 🌐 Public play session access (no login needed)
+Route::get('/play/{code}', [PlaySessionController::class, 'show'])->name('play.session.show');
+Route::post('/play/{code}/join', [PlaySessionController::class, 'join'])->name('play.session.join');
+Route::get('/api/play/{code}', [PlaySessionController::class, 'api'])->name('play.session.api');
+Route::post('/play/{code}/next-turn', [PlaySessionController::class, 'nextTurn']);
+Route::post('/play/{code}/draw', [PlaySessionController::class, 'draw']);
+Route::get('/games/{id}/cards', [GameController::class, 'cards']);
+
+
+// 👤 Logged-in user features
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('Dashboard'))->name('dashboard');
 
-    // ✅ Public game routes for authenticated users
+    // 🎲 Game browsing/playing
     Route::resource('games', GameController::class);
     Route::get('/games/{id}/play', [GameController::class, 'play'])->name('games.play');
-    Route::get('/games/{id}/cards', [GameController::class, 'cards']);
-
+    // 🧑 Profile management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // 🧑‍💼 Host a play session
+    Route::post('/games/{game}/play-session', [PlaySessionController::class, 'store'])->name('play.session.store');
 });
 
+// 🔐 Admin-only routes
 Route::middleware(['auth', 'is_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', AdminDashboardController::class)->name('dashboard');
 
