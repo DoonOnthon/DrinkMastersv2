@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PlayPlayer extends Model
+class SessionPlayer extends Model
 {
     use HasFactory;
 
@@ -14,9 +14,13 @@ class PlayPlayer extends Model
         'user_id',
         'name',
         'turn_order',
+        'is_active',
+        'joined_at',
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
+        'joined_at' => 'datetime',
         'turn_order' => 'integer',
     ];
 
@@ -52,4 +56,3 @@ class PlayPlayer extends Model
         return is_null($this->user_id);
     }
 }
-
