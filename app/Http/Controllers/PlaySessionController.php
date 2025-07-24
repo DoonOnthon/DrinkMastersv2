@@ -60,7 +60,13 @@ class PlaySessionController extends Controller
     // 📡 API for polling session state
     public function api($code)
     {
-        $session = PlaySession::with(['game', 'players'])->where('code', $code)->firstOrFail();
+        $session = PlaySession::with(['players', 'game'])->where('code', $code)->firstOrFail();
+
+        // Update activity (light touch - only every 30 seconds to avoid spam)
+        if (!$session->last_activity || $session->last_activity->diffInSeconds(now()) > 30) {
+            $session->updateActivity();
+        }
+
         return response()->json($session);
     }
 
@@ -69,6 +75,10 @@ class PlaySessionController extends Controller
     {
         try {
             $session = PlaySession::where('code', $code)->firstOrFail();
+
+            // Update activity
+            $session->updateActivity();
+
             $state = $session->state;
             $mode = $state['mode'];
 
@@ -117,17 +127,26 @@ class PlaySessionController extends Controller
             $session->state = $state;
             $session->save();
 
-            return response()->json(['drawn' => $drawn]);
+            // Check if deck is finished and mark as completed
+            if ($session->isDeckFinished()) {
+                $session->markCompleted();
+            }
+
+            return response()->json(['drawn' => $drawn, 'completed' => $session->isDeckFinished()]);
         } catch (\Throwable $e) {
             Log::error('Draw error: ' . $e->getMessage());
             return response()->json(['error' => 'Server error during draw'], 500);
         }
     }
 
-    // 🔄 Advance turn (BOTH HOST AND MULTIPLAYER)
+    // 🔄 Advance turn
     public function nextTurn(string $code)
     {
         $session = PlaySession::with('players')->where('code', $code)->firstOrFail();
+
+        // Update activity
+        $session->updateActivity();
+
         $state = $session->state ?? [];
         $mode = $state['mode'];
 
@@ -202,6 +221,10 @@ class PlaySessionController extends Controller
         ]);
 
         $session = PlaySession::with('players')->where('code', $code)->firstOrFail();
+
+        // Update activity
+        $session->updateActivity();
+
         $name = trim($request->input('name'));
         $mode = $session->state['mode'];
 
@@ -321,6 +344,20 @@ class PlaySessionController extends Controller
                 'show_banners' => !Auth::check(),
             ]
         ]);
+    }
+
+    // 🛑 End session manually
+    public function endSession(string $code)
+    {
+        $session = PlaySession::where('code', $code)->firstOrFail();
+
+        if (!Auth::check() || $session->host_user_id !== Auth::id()) {
+            return response()->json(['error' => 'Only the host can end the session'], 403);
+        }
+
+        $session->markCompleted();
+
+        return response()->json(['success' => true, 'message' => 'Session ended']);
     }
 
     // 🗑️ Delete session (host only)
