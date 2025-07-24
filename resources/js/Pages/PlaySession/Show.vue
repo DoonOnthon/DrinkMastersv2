@@ -234,6 +234,28 @@
                 </div>
             </div>
 
+            <!-- Add after game header -->
+            <div v-if="session.completed_at" class="mx-6 mb-6 bg-gradient-to-r from-green-600 to-emerald-700 text-white p-4 rounded-2xl text-center">
+                <div class="text-2xl mb-2">🎉 Game Completed! 🎉</div>
+                <div class="text-sm opacity-90">Session will be automatically cleaned up in 1 hour</div>
+                <div v-if="isHost" class="mt-3">
+                    <button @click="endSession" class="bg-white text-green-600 px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+                        End Session Now
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add deck finished notification -->
+            <div v-if="isDeckFinished && !session.completed_at" class="mx-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-700 text-white p-4 rounded-2xl text-center">
+                <div class="text-2xl mb-2">🃏 All Cards Drawn! 🃏</div>
+                <div class="text-sm opacity-90">The deck is complete!</div>
+                <div v-if="isHost" class="mt-3">
+                    <button @click="endSession" class="bg-white text-purple-600 px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+                        🏁 End Game
+                    </button>
+                </div>
+            </div>
+
         </div>
 
         <div v-else class="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 flex items-center justify-center">
@@ -410,6 +432,11 @@ const drawCard = async () => {
         const drawRes = await axios.post(`/play/${session.value.code}/draw`)
         console.log('🃏 Draw response:', drawRes.data)
 
+        // Check if game is completed
+        if (drawRes.data.completed) {
+            console.log('🎉 Game completed!')
+        }
+
         // Refresh session first
         await fetchSession()
 
@@ -486,6 +513,26 @@ const canDraw = computed(() => {
 const isHost = computed(() =>
     props.auth?.user?.id && props.session?.host_user_id === props.auth.user.id
 )
+
+// Add computed property
+const isDeckFinished = computed(() => {
+    const totalCards = cards.value.length
+    const drawnCount = session.value?.state?.drawn?.length || 0
+    return drawnCount >= totalCards
+})
+
+// Add end session function
+const endSession = async () => {
+    if (!isHost.value) return
+
+    try {
+        await axios.post(`/play/${session.value.code}/end`)
+        await fetchSession()
+    } catch (error) {
+        console.error('Failed to end session:', error)
+        alert('Failed to end session: ' + (error.response?.data?.error || error.message))
+    }
+}
 </script>
 
 <style scoped>

@@ -26,6 +26,7 @@ Route::post('/play/{code}/next-turn', [PlaySessionController::class, 'nextTurn']
 Route::post('/play/{code}/draw', [PlaySessionController::class, 'draw'])->name('play.session.draw');
 Route::post('/play/{code}/leave', [PlaySessionController::class, 'leave'])->name('play.session.leave');
 Route::delete('/play/{code}', [PlaySessionController::class, 'destroy'])->name('play.session.destroy');
+Route::post('/play/{code}/end', [PlaySessionController::class, 'endSession'])->name('play.session.end');
 Route::get('/games/{id}/cards', [GameController::class, 'cards'])->name('games.cards');
 
 // 👤 Logged-in user features (with email verification)
