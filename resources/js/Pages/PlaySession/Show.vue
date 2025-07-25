@@ -1,15 +1,15 @@
 <template>
     <component :is="layout" :auth="auth">
-        <div v-if="session?.game" class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
+        <div v-if="session?.game" class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white overflow-hidden">
             <!-- 🎮 Game Header -->
-            <div class="text-center pt-8 pb-6">
-                <h1 class="text-5xl font-black mb-2 bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
+            <div class="text-center pt-6 pb-4">
+                <h1 class="text-4xl font-black mb-2 bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent">
                     🎮 {{ session.game.title }}
                 </h1>
                 <div class="inline-block bg-white/10 backdrop-blur-sm rounded-full px-6 py-2">
                     <span class="text-lg font-mono">{{ session.code }}</span>
                 </div>
-                <div class="mt-3">
+                <div class="mt-2">
                     <span class="inline-block px-4 py-1 rounded-full text-sm font-bold"
                           :class="session.state?.mode === 'host' ? 'bg-orange-500' : 'bg-blue-500'">
                         {{ session.state?.mode === 'host' ? '👑 Host-led' : '🎯 Multiplayer' }}
@@ -17,90 +17,65 @@
                 </div>
             </div>
 
-            <!-- 🚨 XP Incentive Banner -->
+            <!-- 🚨 XP Incentive Banner (NO PULSING) -->
             <div v-if="session.state?.mode === 'multiplayer' && !auth?.user"
-                 class="mx-6 mb-6 bg-gradient-to-r from-yellow-400 to-orange-500 text-black p-4 rounded-2xl text-center font-bold shadow-2xl animate-pulse">
-                <div class="text-2xl mb-2">⚡ EARN XP & CLIMB THE LEADERBOARD! ⚡</div>
-                <a href="/login" class="inline-block bg-black text-yellow-400 px-6 py-2 rounded-full hover:scale-105 transition-transform">
+                 class="mx-6 mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black p-3 rounded-2xl text-center font-bold shadow-2xl">
+                <div class="text-lg mb-2">⚡ EARN XP & CLIMB THE LEADERBOARD! ⚡</div>
+                <a href="/login" class="inline-block bg-black text-yellow-400 px-4 py-1 rounded-full hover:scale-105 transition-transform text-sm">
                     🔥 Login Now 🔥
                 </a>
             </div>
 
-            <!-- 🎯 Turn Indicator (Enhanced) - NOW FOR BOTH MODES -->
-            <div v-if="session.players?.length > 0" class="px-6 mb-6">
-                <div class="text-center mb-4">
-                    <div class="inline-block bg-gradient-to-r from-blue-500 to-purple-600 px-8 py-3 rounded-full shadow-2xl">
-                        <span class="text-2xl font-black">🎯 Turn {{ turn + 1 }} of {{ session.players.length }}</span>
-                    </div>
-                </div>
-
-                <!-- Turn Circle Visualization -->
-                <div class="flex justify-center">
-                    <div class="turn-circle">
-                        <div v-for="(player, index) in orderedPlayers" :key="player.id"
-                             class="turn-player"
-                             :class="{
-                                'active': player.turn_order === turn,
-                                'my-turn': player.user_id === auth?.user?.id && player.turn_order === turn,
-                                'host-mode': session.state?.mode === 'host'
-                             }"
-                             :style="getPlayerPosition(index, orderedPlayers.length)">
-                            <div class="turn-avatar">
-                                {{ player.name[0].toUpperCase() }}
-                            </div>
-                            <div class="turn-name">{{ player.name }}</div>
-                            <div v-if="player.turn_order === turn" class="turn-indicator">
-                                <div class="turn-pulse"></div>
-                                <span class="text-xs font-bold">
-                                    {{ session.state?.mode === 'host' ? 'FOCUS' : 'TURN' }}
-                                </span>
-                            </div>
+            <!-- 🙋 Player Management - BEFORE first card OR compact top-left -->
+            <div v-if="session.state?.mode === 'host' && isHost">
+                <!-- Show prominently BEFORE any cards are drawn -->
+                <div v-if="!hasAnyCardsBeenDrawn" class="px-6 mb-4">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-dashed border-yellow-400/50">
+                        <h4 class="font-bold mb-3 text-center text-lg">🎯 Add Players to Start</h4>
+                        <div class="flex gap-3">
+                            <input v-model="playerName" placeholder="Player name"
+                                   class="flex-1 bg-white/20 border border-white/30 px-4 py-2 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                            <button @click="addPlayer" :disabled="!playerName.trim()"
+                                    class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-2 rounded-xl font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
+                                ➕ Add
+                            </button>
                         </div>
-
-                        <!-- Center Turn Info -->
-                        <div class="turn-center">
-                            <div class="text-3xl mb-2">🎯</div>
-                            <div class="font-bold">{{ currentPlayer?.name || 'Unknown' }}</div>
-                            <div class="text-sm opacity-75">
-                                {{ session.state?.mode === 'host' ? 'In focus' : "It's your turn!" }}
-                            </div>
+                        <div v-if="session.players?.length === 0" class="text-center mt-3 text-yellow-400 text-sm">
+                            Add at least one player to begin
                         </div>
                     </div>
                 </div>
 
-                <!-- Host Controls -->
-                <div v-if="session.state?.mode === 'host' && isHost" class="text-center mt-4">
-                    <div class="inline-block bg-gradient-to-r from-orange-400 to-red-500 text-black px-6 py-2 rounded-full font-bold text-lg">
-                        👑 You control the game for {{ currentPlayer?.name || 'Unknown' }}
-                    </div>
-                </div>
-
-                <!-- Player Turn Indicator -->
-                <div v-if="session.state?.mode === 'multiplayer' && isMyTurn" class="text-center mt-4">
-                    <div class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 text-black px-6 py-2 rounded-full font-bold text-lg animate-bounce">
-                        ✨ YOUR TURN! Draw a card! ✨
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🙋 Player Management -->
-            <div v-if="session.state?.mode === 'host' && isHost" class="px-6 mb-6">
-                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                    <h4 class="font-bold mb-3">➕ Add Player</h4>
-                    <div class="flex gap-3">
-                        <input v-model="playerName" placeholder="Player name"
-                               class="flex-1 bg-white/20 border border-white/30 px-4 py-2 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-                        <button @click="addPlayer" :disabled="!playerName.trim()"
-                                class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-2 rounded-xl font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
-                            ➕ Add
+                <!-- Show compactly in top-left AFTER cards are drawn -->
+                <div v-else class="fixed top-4 left-4 z-50">
+                    <div v-if="!showPlayerManager" class="relative">
+                        <button @click="showPlayerManager = true"
+                                class="bg-gradient-to-r from-green-500/80 to-emerald-600/80 backdrop-blur-sm text-white px-3 py-2 rounded-lg font-bold hover:scale-105 transition-transform shadow-lg">
+                            ➕ Add Player
                         </button>
                     </div>
+
+                    <div v-else class="bg-white/10 backdrop-blur-lg rounded-2xl p-4 shadow-2xl border border-white/20 min-w-64">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold">➕ Add Player</h4>
+                            <button @click="showPlayerManager = false" class="text-white/60 hover:text-white text-xl">✕</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <input v-model="playerName" placeholder="Player name"
+                                   class="flex-1 bg-white/20 border border-white/30 px-3 py-2 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm" />
+                            <button @click="addPlayer" :disabled="!playerName.trim()"
+                                    class="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                                ➕
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div v-if="session.state?.mode === 'multiplayer' && !hasJoined && auth?.user" class="px-6 mb-6">
+            <!-- Multiplayer Join -->
+            <div v-if="session.state?.mode === 'multiplayer' && !hasJoined && auth?.user" class="px-6 mb-4">
                 <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4">
-                    <h4 class="font-bold mb-3 text-xl">🎮 Join the Game!</h4>
+                    <h4 class="font-bold mb-3 text-lg">🎮 Join the Game!</h4>
                     <div class="flex gap-3">
                         <input v-model="playerName" placeholder="Your display name"
                                class="flex-1 bg-white/20 border border-white/30 px-4 py-2 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400" />
@@ -112,33 +87,89 @@
                 </div>
             </div>
 
-            <!-- 🃏 Card Drawing Area -->
-            <div class="px-6 mb-8">
+            <!-- 🎯 Turn Indicator (COMPACT) -->
+            <div v-if="session.players?.length > 0" class="px-6 mb-4">
+                <div class="text-center mb-3">
+                    <div class="inline-block bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2 rounded-full shadow-xl">
+                        <span class="text-lg font-black">🎯 Turn {{ turn + 1 }} of {{ session.players.length }}</span>
+                    </div>
+                </div>
+
+                <!-- SMALLER Turn Circle -->
+                <div class="flex justify-center">
+                    <div class="turn-circle-compact">
+                        <div v-for="(player, index) in orderedPlayers" :key="player.id"
+                             class="turn-player-compact"
+                             :class="{
+                                'active': player.turn_order === turn,
+                                'my-turn': player.user_id === auth?.user?.id && player.turn_order === turn,
+                                'host-mode': session.state?.mode === 'host'
+                             }"
+                             :style="getPlayerPositionCompact(index, orderedPlayers.length)">
+                            <div class="turn-avatar-compact">
+                                {{ player.name[0].toUpperCase() }}
+                            </div>
+                            <div class="turn-name-compact">{{ player.name }}</div>
+                        </div>
+
+                        <!-- Center Turn Info -->
+                        <div class="turn-center-compact">
+                            <div class="text-lg">🎯</div>
+                            <div class="font-bold text-sm">{{ currentPlayer?.name || 'Unknown' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Host/Player Status (COMPACT) -->
+                <div class="text-center mt-3">
+                    <div class="mt-tiny-move">
+                    <div v-if="session.state?.mode === 'host' && isHost" class="inline-block bg-gradient-to-r from-orange-400 to-red-500 text-black px-4 py-1 rounded-full font-bold text-sm">
+                        👑 You control for {{ currentPlayer?.name || 'Unknown' }}
+                    </div>
+                    <div v-else-if="session.state?.mode === 'multiplayer' && isMyTurn" class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 text-black px-4 py-1 rounded-full font-bold text-sm">
+                        ✨ YOUR TURN! ✨
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 🃏 Card Drawing Area (FIXED LAYOUT) -->
+            <div class="px-6">
+                <!-- Draw Pile (ALWAYS IN SAME POSITION) -->
                 <div class="flex justify-center items-center gap-6">
-                    <!-- Draw Pile -->
+                    <!-- Draw Pile Container -->
                     <div class="draw-pile-container">
-                        <div v-if="canDraw && !justDrewCard" @click="drawCard" class="draw-pile clickable">
-                            <div class="card-stack card-3"></div>
-                            <div class="card-stack card-2"></div>
-                            <div class="card-stack card-1">
-                                <div class="card-content">
+                        <!-- Main draw pile -->
+                        <div v-if="canDraw" @click="drawCard" class="draw-pile"
+                             :class="{ 'clickable': !justDrewCard, 'dimmed': justDrewCard }">
+                            <div class="card-stack card-3" :class="{ 'shake-animation': isDrawing }"></div>
+                            <div class="card-stack card-2" :class="{ 'shake-animation': isDrawing }"></div>
+                            <div class="card-stack card-1" :class="{
+                                'drawing-animation': isDrawing,
+                                'card-being-drawn': isCardFlying,
+                                'card-just-drawn': isCardFlying
+                            }">
+                                <!-- Show the actual card content when not flying -->
+                                <div v-if="!isCardFlying" class="card-content">
                                     <div class="text-4xl mb-2">🃏</div>
-                                    <div class="text-sm font-bold">DRAW CARD</div>
+                                    <div class="text-sm font-bold">{{ isDrawing ? 'DRAWING...' : 'DRAW CARD' }}</div>
                                     <div class="text-xs opacity-75">{{ cardsRemaining }} left</div>
                                 </div>
-                            </div>
-                            <div class="draw-glow"></div>
-                        </div>
 
-                        <div v-else-if="justDrewCard" class="draw-pile">
-                            <div class="card-stack card-1 drawing">
-                                <div class="card-content">
-                                    <div class="text-2xl">✨</div>
-                                    <div class="text-sm">Drawing...</div>
+                                <!-- Show the drawn card when flying -->
+                                <div v-else class="card-content mystery-card-compact">
+                                    <div class="mystery-pattern-compact"></div>
+                                    <div class="mystery-content-compact">
+                                        <div class="text-2xl mb-2">🎭</div>
+                                        <div class="text-sm font-bold">Mystery Card</div>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="draw-glow" :class="{ 'super-glow': isDrawing }"></div>
                         </div>
 
+                        <!-- Disabled state -->
                         <div v-else class="draw-pile disabled">
                             <div class="card-stack card-1">
                                 <div class="card-content">
@@ -154,103 +185,113 @@
                         </div>
                     </div>
 
-                    <!-- Optional: Keep manual button as backup/emergency use -->
-                    <div v-if="session.state?.mode === 'host' && isHost && session.players?.length > 1 && !justDrewCard"
+                    <!-- Manual Skip (Emergency) -->
+                    <div v-if="session.state?.mode === 'host' && isHost && session.players?.length > 1"
                          class="flex flex-col items-center">
                         <button @click="advanceTurn"
-                                class="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 py-2 rounded-lg font-bold hover:scale-105 transition-transform shadow-lg opacity-75">
+                                class="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-2 rounded-lg font-bold hover:scale-105 transition-transform shadow-lg opacity-75 text-sm">
                             <div class="text-sm">🔄</div>
-                            <div class="text-xs">Skip Turn</div>
+                            <div class="text-xs">Skip</div>
                         </button>
-                        <div class="text-xs mt-1 opacity-50">Emergency skip</div>
+                    </div>
+                </div>
+
+                <!-- ✨ FLOATING CARD DISPLAY (APPEARS ABOVE DECK) -->
+                <div v-if="justDrewCard && lastDrawnCard"
+                     class="floating-card-overlay">
+                    <div class="floating-card-container">
+                        <div class="text-center mb-3">
+                            <h3 class="text-lg font-bold mb-1">Card Drawn!</h3>
+                            <p class="text-xs opacity-90">Drawn by: <strong>{{ lastDrawnBy }}</strong></p>
+                        </div>
+
+                        <div class="flex justify-center">
+                            <!-- ✨ Card that flies from deck position -->
+                            <div class="drawn-card-container-compact"
+                                 :class="{ 'card-flying': isCardFlying, 'card-landed': hasCardLanded }"
+                                 @click="!flippedCurrent && (flippedCurrent = true)">
+
+                                <div class="drawn-card-compact" :class="{ 'flipped': flippedCurrent }">
+                                    <!-- Card Back -->
+                                    <div class="card-face card-back">
+                                        <div class="mystery-card-compact">
+                                            <div class="mystery-pattern-compact"></div>
+                                            <div class="mystery-content-compact">
+                                                <div class="text-2xl mb-2">🎭</div>
+                                                <div class="text-sm font-bold">Mystery Card</div>
+                                                <div class="text-xs opacity-75" v-if="!flippedCurrent">
+                                                    {{ flipCountdown > 0 ? `Auto-flip in ${flipCountdown}s` : 'Tap to reveal' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card Front -->
+                                    <div class="card-face card-front">
+                                        <div class="revealed-card-compact">
+                                            <div class="card-header-compact">
+                                                <div class="card-suit-compact">{{ lastDrawnCard.suit }}</div>
+                                                <div class="card-label-compact">{{ lastDrawnCard.label }}</div>
+                                            </div>
+                                            <div class="card-action-compact">
+                                                {{ lastDrawnCard.action_text }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ✨ Subtle glow when card lands -->
+                                <div v-if="hasCardLanded" class="card-landing-glow"></div>
+                            </div>
+                        </div>
+
+                        <div v-if="flippedCurrent" class="text-center mt-3">
+                            <button @click="finalizeCard" class="finalize-button-compact">
+                                <span class="text-lg">🍻</span>
+                                <span class="ml-2">Done Drinking! Next Turn</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 🎉 Current Card Display -->
-            <div v-if="justDrewCard && lastDrawnCard" class="px-6 mb-8">
-                <div class="text-center mb-4">
-                    <h3 class="text-3xl font-bold mb-2">🎉 Card Drawn!</h3>
-                    <p class="text-lg opacity-90">Drawn by: <strong>{{ lastDrawnBy }}</strong></p>
-                </div>
-
-                <div class="flex justify-center">
-                    <div class="drawn-card-container" @click="!flippedCurrent && (flippedCurrent = true)">
-                        <div class="drawn-card" :class="{ 'flipped': flippedCurrent }">
-                            <!-- Card Back -->
-                            <div class="card-face card-back">
-                                <div class="mystery-card">
-                                    <div class="mystery-pattern"></div>
-                                    <div class="mystery-content">
-                                        <div class="text-6xl mb-4">🎭</div>
-                                        <div class="text-xl font-bold">Mystery Card</div>
-                                        <div class="text-sm opacity-75">Tap to reveal</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Card Front -->
-                            <div class="card-face card-front">
-                                <div class="revealed-card">
-                                    <div class="card-header">
-                                        <div class="card-suit">{{ lastDrawnCard.suit }}</div>
-                                        <div class="card-label">{{ lastDrawnCard.label }}</div>
-                                    </div>
-                                    <div class="card-action">
-                                        {{ lastDrawnCard.action_text }}
-                                    </div>
-                                    <div class="card-sparkles">✨</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="flippedCurrent" class="text-center mt-6">
-                    <button @click="finalizeCard" class="finalize-button">
-                        <span class="text-2xl">🍻</span>
-                        <span class="ml-2">Done Drinking! Next Turn</span>
+            <!-- 🧩 Card History (COMPACT, BOTTOM) -->
+            <div v-if="drawHistory.length > 0" class="px-6 py-4 mt-6">
+                <div class="text-center mb-3">
+                    <button @click="showHistory = !showHistory"
+                            class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-bold hover:scale-105 transition-transform">
+                        📚 Card History ({{ drawHistory.length }}) {{ showHistory ? '▼' : '▲' }}
                     </button>
                 </div>
-            </div>
 
-            <!-- 🧩 Card History -->
-            <div v-if="drawHistory.length > 0" class="px-6 pb-8">
-                <h3 class="text-2xl font-bold text-center mb-6">📚 Card History</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <transition-group name="history-card">
-                        <div v-for="(entry, index) in drawHistory" :key="`history-${index}`"
-                             class="history-card">
-                            <div class="history-card-content">
-                                <div class="history-header">
-                                    <span class="history-suit">{{ entry.card.suit }}</span>
-                                    <span class="history-label">{{ entry.card.label }}</span>
-                                </div>
-                                <div class="history-player">{{ entry.playerName }}</div>
-                                <div class="history-action">{{ entry.card.action_text }}</div>
-                            </div>
+                <div v-if="showHistory" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-48 overflow-y-auto">
+                    <div v-for="(entry, index) in drawHistory" :key="`history-${index}`" class="history-card-compact">
+                        <div class="history-header-compact">
+                            <span class="history-suit-compact">{{ entry.card.suit }}</span>
+                            <span class="history-label-compact">{{ entry.card.label }}</span>
                         </div>
-                    </transition-group>
+                        <div class="history-player-compact">{{ entry.playerName }}</div>
+                        <div class="history-action-compact">{{ entry.card.action_text }}</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Add after game header -->
-            <div v-if="session.completed_at" class="mx-6 mb-6 bg-gradient-to-r from-green-600 to-emerald-700 text-white p-4 rounded-2xl text-center">
-                <div class="text-2xl mb-2">🎉 Game Completed! 🎉</div>
-                <div class="text-sm opacity-90">Session will be automatically cleaned up in 1 hour</div>
-                <div v-if="isHost" class="mt-3">
-                    <button @click="endSession" class="bg-white text-green-600 px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+            <!-- Game Status Messages (COMPACT) -->
+            <div v-if="session.completed_at" class="mx-6 mt-4 bg-gradient-to-r from-green-600 to-emerald-700 text-white p-3 rounded-xl text-center">
+                <div class="text-lg mb-1">🎉 Game Completed! 🎉</div>
+                <div class="text-xs opacity-90">Session will be automatically cleaned up in 1 hour</div>
+                <div v-if="isHost" class="mt-2">
+                    <button @click="endSession" class="bg-white text-green-600 px-3 py-1 rounded-full font-bold hover:scale-105 transition-transform text-sm">
                         End Session Now
                     </button>
                 </div>
             </div>
 
-            <!-- Add deck finished notification -->
-            <div v-if="isDeckFinished && !session.completed_at" class="mx-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-700 text-white p-4 rounded-2xl text-center">
-                <div class="text-2xl mb-2">🃏 All Cards Drawn! 🃏</div>
-                <div class="text-sm opacity-90">The deck is complete!</div>
-                <div v-if="isHost" class="mt-3">
-                    <button @click="endSession" class="bg-white text-purple-600 px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+            <div v-if="isDeckFinished && !session.completed_at" class="mx-6 mt-4 bg-gradient-to-r from-purple-600 to-pink-700 text-white p-3 rounded-xl text-center">
+                <div class="text-lg mb-1">🃏 All Cards Drawn! 🃏</div>
+                <div class="text-xs opacity-90">The deck is complete!</div>
+                <div v-if="isHost" class="mt-2">
+                    <button @click="endSession" class="bg-white text-purple-600 px-3 py-1 rounded-full font-bold hover:scale-105 transition-transform text-sm">
                         🏁 End Game
                     </button>
                 </div>
@@ -264,19 +305,11 @@
                 <div class="text-2xl font-bold">Loading session...</div>
             </div>
         </div>
-
-        <!-- Debug section -->
-        <div v-if="session?.game" class="px-6 mb-4 bg-red-900/20 text-white p-4 rounded">
-            <h4 class="font-bold">🐛 Debug Info:</h4>
-            <p>Mode: {{ session.state?.mode }} | Turn: {{ turn }} | Players: {{ orderedPlayers.length }}</p>
-            <p>Current Player: {{ currentPlayer?.name }} (turn_order: {{ currentPlayer?.turn_order }})</p>
-            <p>Is Host: {{ isHost }} | Can Draw: {{ canDraw }}</p>
-        </div>
     </component>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import axios from 'axios'
@@ -298,6 +331,21 @@ const lastDrawnBy = ref(null)
 const justDrewCard = ref(false)
 const flippedCurrent = ref(false)
 const drawHistory = ref([])
+const showPlayerManager = ref(false)
+const showHistory = ref(false)
+
+// ✨ Animation state variables
+const isDrawing = ref(false)
+const isCardFlying = ref(false)
+const hasCardLanded = ref(false)
+const showParticles = ref(false)
+const flipCountdown = ref(0)
+let flipTimer = null
+
+// ✅ Check if any cards have been drawn
+const hasAnyCardsBeenDrawn = computed(() => {
+    return (session.value?.state?.drawn?.length || 0) > 0
+})
 
 const cardsRemaining = computed(() => {
     const totalCards = cards.value.length
@@ -309,16 +357,78 @@ const orderedPlayers = computed(() => {
     return session.value?.players?.slice().sort((a, b) => a.turn_order - b.turn_order) || []
 })
 
-const getPlayerPosition = (index, total) => {
-    const angle = (index * 360) / total - 90 // Start from top
-    const radius = 120
+const currentPlayer = computed(() =>
+    session.value?.players?.find(p => p.turn_order === turn.value)
+)
+
+const isMyTurn = computed(() => {
+    if (session.value?.state?.mode === 'multiplayer') {
+        return currentPlayer.value?.user_id === props.auth?.user?.id
+    }
+    return false
+})
+
+const canDraw = computed(() => {
+    const mode = session.value?.state?.mode
+
+    if (mode === 'host') {
+        return isHost.value
+    } else if (mode === 'multiplayer') {
+        return props.auth?.user && isMyTurn.value
+    }
+
+    return false
+})
+
+const isHost = computed(() =>
+    props.auth?.user?.id && props.session?.host_user_id === props.auth.user.id
+)
+
+const isDeckFinished = computed(() => {
+    const totalCards = cards.value.length
+    const drawnCount = session.value?.state?.drawn?.length || 0
+    return drawnCount >= totalCards
+})
+
+// ✅ Compact position calculation
+const getPlayerPositionCompact = (index, total) => {
+    const angle = (index * 360) / total - 90
+    const radius = 80
     const x = Math.cos(angle * Math.PI / 180) * radius
     const y = Math.sin(angle * Math.PI / 180) * radius
 
     return {
         transform: `translate(${x}px, ${y}px)`,
-        // Fix: Use the actual player's turn_order, not the loop index
         zIndex: orderedPlayers.value[index]?.turn_order === turn.value ? 10 : 1
+    }
+}
+
+// ✨ Particle animation helper
+const getParticleStyle = (index) => {
+    const angle = (index * 30) * Math.PI / 180
+    const distance = 100 + Math.random() * 50
+    const x = Math.cos(angle) * distance
+    const y = Math.sin(angle) * distance
+
+    return {
+        '--particle-x': `${x}px`,
+        '--particle-y': `${y}px`,
+        '--delay': `${index * 0.1}s`,
+        animationDelay: `${index * 0.1}s`
+    }
+}
+
+// ✅ Enhanced addPlayer function
+const addPlayer = async () => {
+    if (!playerName.value.trim()) return
+
+    try {
+        await axios.post(`/play/${props.session.code}/join`, { name: playerName.value })
+        playerName.value = ''
+        showPlayerManager.value = false
+        await fetchSession()
+    } catch (e) {
+        alert(e.response?.data?.error || 'Error adding player')
     }
 }
 
@@ -347,7 +457,6 @@ const finalizeCard = async () => {
             console.log('🔄 New turn:', turn.value, 'New player:', currentPlayer.value?.name)
         } catch (error) {
             console.error('❌ Auto turn advancement failed:', error)
-            // Don't show alert here, just log the error - the card was still finalized successfully
         }
     }
 
@@ -362,7 +471,6 @@ const finalizeCard = async () => {
             console.log('🔄 New turn:', turn.value, 'New player:', currentPlayer.value?.name)
         } catch (error) {
             console.error('❌ Auto turn advancement failed:', error)
-            // Don't show alert here either
         }
     }
 }
@@ -407,50 +515,64 @@ const join = async () => {
     }
 }
 
-const addPlayer = async () => {
-    if (!playerName.value.trim()) return
-
-    try {
-        await axios.post(`/play/${props.session.code}/join`, { name: playerName.value })
-        playerName.value = ''
-        await fetchSession()
-    } catch (e) {
-        alert(e.response?.data?.error || 'Error adding player')
-    }
-}
-
+// ✨ Enhanced draw card function with PROPER deck-to-center animation
 const drawCard = async () => {
-    if (!canDraw.value) return
+    if (!canDraw.value || isDrawing.value) return
 
     try {
-        justDrewCard.value = true
+        // 🎬 Start drawing animation
+        isDrawing.value = true
+        isCardFlying.value = false
+        hasCardLanded.value = false
         flippedCurrent.value = false
+        flipCountdown.value = 0
 
         console.log('🎯 Before draw - Current turn:', turn.value, 'Current player:', currentPlayer.value?.name)
 
-        // Draw the card
+        // 🎬 Wait for deck shake animation
+        await new Promise(resolve => setTimeout(resolve, 800))
+
+        // Draw the card from backend
         const drawRes = await axios.post(`/play/${session.value.code}/draw`)
         console.log('🃏 Draw response:', drawRes.data)
 
-        // Check if game is completed
-        if (drawRes.data.completed) {
-            console.log('🎉 Game completed!')
-        }
+        // Get the drawn card data immediately
+        const drawnIndexes = drawRes.data.drawn
+        const newCardIndex = drawnIndexes[drawnIndexes.length - 1]
+        lastDrawnCard.value = cards.value[newCardIndex]
+        lastDrawnBy.value = currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone')
 
-        // Refresh session first
+        // 🎬 Start the flying animation - card flies FROM deck position
+        isDrawing.value = false
+        isCardFlying.value = true
+
+        // 🎬 After flying animation completes, show the landed card
+        setTimeout(() => {
+            isCardFlying.value = false
+            justDrewCard.value = true
+            hasCardLanded.value = true
+        }, 800) // Match the cardFlyFromDeck animation duration
+
+        // Refresh session after animation
         await fetchSession()
 
-        console.log('🎯 After refresh - Turn:', turn.value, 'Player:', currentPlayer.value?.name)
-
-        // Show the drawn card with delay for effect
+        // 🎬 Auto-flip countdown
         setTimeout(() => {
-            const drawnIndexes = drawRes.data.drawn
-            const newCardIndex = drawnIndexes[drawnIndexes.length - 1]
-            lastDrawnCard.value = cards.value[newCardIndex]
-            lastDrawnBy.value = currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone')
-        }, 500)
+            if (!flippedCurrent.value) {
+                flipCountdown.value = 3
+                flipTimer = setInterval(() => {
+                    flipCountdown.value--
+                    if (flipCountdown.value <= 0) {
+                        clearInterval(flipTimer)
+                        flippedCurrent.value = true
+                    }
+                }, 1000)
+            }
+        }, 1500) // Start countdown after card has landed
 
     } catch (e) {
+        isDrawing.value = false
+        isCardFlying.value = false
         justDrewCard.value = false
         console.error('❌ Draw failed:', e.response?.data || e.message)
         alert('Something went wrong: ' + (e.response?.data?.error || e.message))
@@ -474,53 +596,6 @@ const advanceTurn = async () => {
     }
 }
 
-onMounted(async () => {
-    playerName.value = localStorage.getItem(`name:${props.session.code}`) || ''
-    await fetchCards()
-
-    if (session.value.state?.mode === 'multiplayer') {
-        hasJoined.value = session.value.players.some(p =>
-            p.name === playerName.value || p.user_id === props.auth?.user?.id
-        )
-    }
-
-    setInterval(fetchSession, 2000)
-})
-
-const currentPlayer = computed(() =>
-    session.value?.players?.find(p => p.turn_order === turn.value)
-)
-
-const isMyTurn = computed(() => {
-    if (session.value?.state?.mode === 'multiplayer') {
-        return currentPlayer.value?.user_id === props.auth?.user?.id
-    }
-    return false
-})
-
-const canDraw = computed(() => {
-    const mode = session.value?.state?.mode
-
-    if (mode === 'host') {
-        return isHost.value
-    } else if (mode === 'multiplayer') {
-        return props.auth?.user && isMyTurn.value
-    }
-
-    return false
-})
-
-const isHost = computed(() =>
-    props.auth?.user?.id && props.session?.host_user_id === props.auth.user.id
-)
-
-// Add computed property
-const isDeckFinished = computed(() => {
-    const totalCards = cards.value.length
-    const drawnCount = session.value?.state?.drawn?.length || 0
-    return drawnCount >= totalCards
-})
-
 // Add end session function
 const endSession = async () => {
     if (!isHost.value) return
@@ -533,6 +608,24 @@ const endSession = async () => {
         alert('Failed to end session: ' + (error.response?.data?.error || error.message))
     }
 }
+
+// Clean up timer when component unmounts
+onUnmounted(() => {
+    if (flipTimer) clearInterval(flipTimer)
+})
+
+onMounted(async () => {
+    playerName.value = localStorage.getItem(`name:${props.session.code}`) || ''
+    await fetchCards()
+
+    if (session.value.state?.mode === 'multiplayer') {
+        hasJoined.value = session.value.players.some(p =>
+            p.name === playerName.value || p.user_id === props.auth?.user?.id
+        )
+    }
+
+    setInterval(fetchSession, 2000)
+})
 </script>
 
 <style scoped>
@@ -602,6 +695,35 @@ const endSession = async () => {
     @apply absolute inset-0 flex flex-col items-center justify-center text-center bg-white/5 backdrop-blur-sm rounded-full border border-white/20;
 }
 
+/* ✅ COMPACT STYLES */
+.turn-circle-compact {
+    @apply relative w-48 h-48 flex items-center justify-center;
+}
+
+.turn-player-compact {
+    @apply absolute transition-all duration-300 ease-in-out;
+}
+
+.turn-player-compact.active {
+    @apply scale-110;
+}
+
+.turn-avatar-compact {
+    @apply w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg transition-all duration-300;
+}
+
+.turn-player-compact.active .turn-avatar-compact {
+    @apply bg-gradient-to-br from-yellow-400 to-orange-500 ring-2 ring-white/50;
+}
+
+.turn-name-compact {
+    @apply text-center text-xs font-bold mt-1;
+}
+
+.turn-center-compact {
+    @apply absolute inset-0 flex flex-col items-center justify-center text-center bg-white/5 backdrop-blur-sm rounded-full border border-white/20;
+}
+
 /* Draw Pile */
 .draw-pile-container {
     @apply relative;
@@ -644,28 +766,48 @@ const endSession = async () => {
 }
 
 .draw-glow {
-    @apply absolute inset-0 bg-gradient-to-br from-yellow-400/30 to-pink-500/30 rounded-2xl blur-xl -z-10 animate-pulse;
+    @apply absolute inset-0 bg-gradient-to-br from-yellow-400/30 to-pink-500/30 rounded-2xl blur-xl -z-10;
+    transition: all 0.3s ease;
 }
 
 .clickable .draw-glow {
     @apply opacity-100;
 }
 
+.clickable:hover .draw-glow {
+    @apply opacity-100 scale-110;
+    background: linear-gradient(45deg,
+        rgba(251, 191, 36, 0.5),
+        rgba(249, 158, 11, 0.5),
+        rgba(239, 68, 68, 0.5)
+    );
+}
+
 /* Drawn Card */
 .drawn-card-container {
-    @apply relative w-80 h-96 perspective-1000;
+    @apply relative w-80 h-96;
+    perspective: 1000px;
 }
 
-.drawn-card {
-    @apply relative w-full h-full transform-style-preserve-3d transition-transform duration-700 cursor-pointer;
+.drawn-card-container-compact {
+    @apply relative w-48 h-64;
+    perspective: 1000px;
 }
 
-.drawn-card.flipped {
-    @apply rotate-y-180;
+.drawn-card, .drawn-card-compact {
+    @apply relative w-full h-full cursor-pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.7s;
+}
+
+.drawn-card.flipped, .drawn-card-compact.flipped {
+    transform: rotateY(180deg);
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .card-face {
-    @apply absolute w-full h-full backface-hidden rounded-3xl overflow-hidden shadow-2xl;
+    @apply absolute w-full h-full rounded-3xl overflow-hidden shadow-2xl;
+    backface-visibility: hidden;
 }
 
 .card-back {
@@ -673,48 +815,30 @@ const endSession = async () => {
 }
 
 .card-front {
-    @apply bg-white rotate-y-180;
+    @apply bg-white;
+    transform: rotateY(180deg);
 }
 
-.mystery-card {
-    @apply relative h-full flex flex-col items-center justify-center text-white p-6;
-    background: linear-gradient(45deg, #6b46c1, #7c3aed, #8b5cf6, #a855f7);
-    background-size: 400% 400%;
+/* ✅ COMPACT CARD STYLES */
+.mystery-card-compact {
+    @apply relative h-full flex flex-col items-center justify-center text-white p-4;
+    background: linear-gradient(45deg, #6b46c1, #7c3aed, #8b5cf6, #a855f7, #c084fc, #8b5cf6, #7c3aed, #6b46c1);
+    background-size: 800% 800%;
     animation: mysteryGradient 3s ease infinite;
 }
 
-.mystery-pattern {
+.mystery-pattern-compact {
     @apply absolute inset-0 opacity-20;
-    background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.1) 8px, rgba(255,255,255,0.1) 16px);
 }
 
-.mystery-content {
+.mystery-content-compact {
     @apply relative z-10 text-center;
 }
 
-.revealed-card {
-    @apply h-full p-6 text-gray-800 relative overflow-hidden;
+.revealed-card-compact {
+    @apply h-full p-4 text-gray-800 relative overflow-hidden;
     background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
-}
-
-.card-header {
-    @apply flex justify-between items-start mb-4;
-}
-
-.card-suit {
-    @apply text-2xl font-bold bg-white/20 px-3 py-1 rounded-full;
-}
-
-.card-label {
-    @apply text-3xl font-black;
-}
-
-.card-action {
-    @apply text-lg leading-relaxed font-medium bg-white/10 backdrop-blur-sm rounded-2xl p-4;
-}
-
-.card-sparkles {
-    @apply absolute top-4 right-4 text-4xl animate-pulse;
 }
 
 /* Finalize Button */
@@ -722,9 +846,17 @@ const endSession = async () => {
     @apply bg-gradient-to-r from-pink-500 to-rose-600 text-white px-8 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-105 transition-transform;
 }
 
+.finalize-button-compact {
+    @apply bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-3 rounded-full text-lg font-bold shadow-xl hover:scale-105 transition-transform;
+}
+
 /* History Cards */
 .history-card {
     @apply bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover:scale-105 transition-transform;
+}
+
+.history-card-compact {
+    @apply bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 hover:scale-105 transition-transform;
 }
 
 .history-card-content {
@@ -735,59 +867,274 @@ const endSession = async () => {
     @apply flex justify-between items-center;
 }
 
+.history-header-compact {
+    @apply flex justify-between items-center mb-1;
+}
+
 .history-suit {
     @apply text-sm font-bold bg-white/20 px-2 py-1 rounded;
+}
+
+.history-suit-compact {
+    @apply text-xs font-bold bg-white/20 px-2 py-1 rounded;
 }
 
 .history-label {
     @apply font-bold;
 }
 
+.history-label-compact {
+    @apply font-bold text-sm;
+}
+
 .history-player {
     @apply text-xs text-yellow-400 font-bold;
+}
+
+.history-player-compact {
+    @apply text-xs text-yellow-400 font-bold mb-1;
 }
 
 .history-action {
     @apply text-sm opacity-90 leading-relaxed;
 }
 
-/* Animations */
+.history-action-compact {
+    @apply text-xs opacity-90 leading-relaxed;
+}
+
+/* ✨ CARD DRAWING ANIMATIONS */
+@keyframes shake {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(-2px) rotate(-1deg); }
+    75% { transform: translateX(2px) rotate(1deg); }
+}
+
+@keyframes cardFly {
+    0% {
+        transform: translateY(200px) translateX(0) scale(0.6) rotate(-5deg);
+        opacity: 0;
+    }
+    20% {
+        transform: translateY(100px) translateX(0) scale(0.8) rotate(-2deg);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes cardFlyFromDeck {
+    0% {
+        transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    25% {
+        transform: translateY(-30px) translateX(30px) scale(1.1) rotate(8deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-60px) translateX(15px) scale(1.05) rotate(4deg);
+        opacity: 1;
+    }
+    75% {
+        transform: translateY(-80px) translateX(-10px) scale(0.9) rotate(-2deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-100px) translateX(0) scale(0.8) rotate(0deg);
+        opacity: 0;
+    }
+}
+
+@keyframes cardLand {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes superGlow {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes drawingPulse {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+    }
+    50% {
+        transform: scale(1.05) rotate(2deg);
+        box-shadow: 0 0 40px rgba(251, 191, 36, 0.8);
+    }
+}
+
+@keyframes particleExplode {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--particle-x), var(--particle-y)) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes landingGlow {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+}
+
+/* ✨ ANIMATION CLASSES */
+.shake-animation {
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+.drawing-animation {
+    animation: drawingPulse 1s ease-in-out infinite;
+}
+
+.super-glow {
+    animation: superGlow 0.5s ease-in-out infinite;
+}
+
+.card-flying {
+    animation: cardFly 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    z-index: 100;
+}
+
+.card-landed {
+    animation: cardLand 0.4s ease-out;
+}
+
+.magic-particles {
+    @apply absolute inset-0 pointer-events-none;
+    z-index: 200;
+}
+
+.particle {
+    @apply absolute top-1/2 left-1/2 text-2xl;
+    animation: particleExplode 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.card-landing-glow {
+    @apply absolute inset-0 rounded-3xl;
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 70%);
+    animation: landingGlow 1s ease-out;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ✨ FLOATING CARD OVERLAY */
+.floating-card-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    animation: overlayFadeIn 0.3s ease-out;
+}
+
+.floating-card-container {
+    @apply relative z-50;
+    animation: cardDropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ✨ ENHANCED CARD FLYING ANIMATION */
+.card-just-drawn {
+    animation: cardFlyFromDeck 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    z-index: 100;
+}
+
+.card-being-drawn {
+    @apply opacity-30;
+    transition: opacity 0.3s ease;
+}
+
+.draw-pile.dimmed {
+    @apply opacity-40;
+    transition: opacity 0.3s ease;
+}
+
+/* ✨ OVERLAY ANIMATIONS */
+@keyframes overlayFadeIn {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes cardDropIn {
+    0% {
+        transform: translateY(-100px) scale(0.8);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* ✨ Card appearance animation in overlay */
+.card-flying {
+    animation: cardAppearInOverlay 0.3s ease-out forwards;
+    z-index: 100;
+}
+
+@keyframes cardAppearInOverlay {
+    0% {
+        transform: translateY(-20px) scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+.mt-tiny-move {
+  margin-top: 2.5rem; /* or whatever you prefer, like 0.4rem */
+}
+
+/* ✨ Missing compact card styles */
+.card-header-compact {
+    @apply flex justify-between items-start mb-3;
+}
+
+.card-suit-compact {
+    @apply text-lg font-bold bg-white/20 px-2 py-1 rounded-full;
+}
+
+.card-label-compact {
+    @apply text-xl font-black;
+}
+
+.card-action-compact {
+    @apply text-sm leading-relaxed font-medium bg-white/10 backdrop-blur-sm rounded-xl p-3;
+}
+
+/* ✨ MYSTERY CARD GRADIENT ANIMATION */
 @keyframes mysteryGradient {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
-}
-
-.history-card-enter-active,
-.history-card-leave-active {
-    transition: all 0.5s ease;
-}
-
-.history-card-enter-from,
-.history-card-leave-to {
-    opacity: 0;
-    transform: scale(0.8) translateY(20px);
-}
-
-/* Utility Classes */
-.perspective-1000 {
-    perspective: 1000px;
-}
-
-.transform-style-preserve-3d {
-    transform-style: preserve-3d;
-}
-
-.backface-hidden {
-    backface-visibility: hidden;
-}
-
-.rotate-y-180 {
-    transform: rotateY(180deg);
-}
-
-/* Add host-mode specific styling */
-.turn-player.host-mode.active .turn-avatar {
-    @apply bg-gradient-to-br from-orange-400 to-red-500 ring-4 ring-orange-400/50;
 }
 </style>
