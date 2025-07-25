@@ -15,7 +15,8 @@ class GameRule extends Model
         'description',
         'action_text',
         'category',
-        'intensity'
+        'intensity',
+        'requires_input'
     ];
 
     public function game(): BelongsTo
