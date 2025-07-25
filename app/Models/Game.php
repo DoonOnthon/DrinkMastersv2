@@ -4,9 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Rule;
-use App\Models\GameSession;
-use App\Models\Card;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
 
 class Game extends Model
 {
@@ -14,17 +13,63 @@ class Game extends Model
 
     protected $fillable = ['title', 'type', 'description'];
 
-    public function rules()
+    public function gameRules(): HasMany
     {
-        return $this->hasMany(Rule::class);
-    }
-    public function cards()
-    {
-        return $this->hasMany(Card::class);
+        return $this->hasMany(GameRule::class);
     }
 
-    public function sessions()
+    // ✅ FIXED: Get all cards with rules applied for this game
+    public function getCardsWithRules()
     {
-        return $this->hasMany(GameSession::class);
+        // ✅ Store the game ID to ensure context is preserved
+        $gameId = $this->id;
+
+        $universalCards = \App\Models\UniversalCard::all();
+
+        // ✅ Use explicit game ID instead of relationship to avoid context loss
+        $gameRules = \App\Models\GameRule::where('game_id', $gameId)
+            ->get()
+            ->keyBy('card_value');
+
+        \Log::info('Game rules loaded with explicit ID', [
+            'game_id' => $gameId,
+            'rules_count' => $gameRules->count(),
+            'rule_keys' => $gameRules->keys()->toArray()
+        ]);
+
+        return $universalCards->map(function ($card, $index) use ($gameRules, $gameId) {
+            // ✅ Try string match first (since DB stores as strings)
+            $rule = $gameRules->get((string) $card->value);
+
+            // ✅ Fallback to integer match
+            if (!$rule) {
+                $rule = $gameRules->get($card->value);
+            }
+
+            // ✅ DEBUG: Log failed matches with more context
+            if (!$rule) {
+                \Log::warning('No rule found for card', [
+                    'game_id' => $gameId,
+                    'card_value' => $card->value,
+                    'card_value_type' => gettype($card->value),
+                    'card_value_as_string' => (string) $card->value,
+                    'available_rule_keys' => $gameRules->keys()->toArray(),
+                    'rules_count' => $gameRules->count()
+                ]);
+            }
+
+            return (object) [
+                'id' => $index,
+                'label' => $card->label,
+                'suit' => $card->suit,
+                'value' => $card->value,
+                'color' => $card->color,
+                'action_text' => $rule ? $rule->action_text : 'No rule defined',
+                'rule_name' => $rule ? $rule->name : null,
+                'rule_description' => $rule ? $rule->description : null,
+                'category' => $rule ? $rule->category : null,
+                'intensity' => $rule ? $rule->intensity : 'medium'
+            ];
+        })->toArray();
     }
 }

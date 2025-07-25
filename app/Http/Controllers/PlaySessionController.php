@@ -35,8 +35,13 @@ class PlaySessionController extends Controller
 
         Log::info('Creating session with mode: ' . $mode);
 
-        $cards = $game->cards()->pluck('id')->toArray();
-        shuffle($cards);
+        // ✅ FIX: Get the actual cards count from the game
+        $cardsWithRules = $game->getCardsWithRules();
+        $totalCards = count($cardsWithRules);
+
+        // Create deck array [0, 1, 2, ... totalCards-1]
+        $deck = range(0, $totalCards - 1);
+        shuffle($deck);
 
         $session = PlaySession::create([
             'game_id' => $game->id,
@@ -48,7 +53,7 @@ class PlaySessionController extends Controller
                 'status' => 'waiting',
                 'drawn' => [],
                 'turn' => 0,
-                'deck' => $cards,
+                'deck' => $deck,
                 'max_players' => 8,
                 'created_at' => now()->toISOString(),
             ],
@@ -108,19 +113,18 @@ class PlaySessionController extends Controller
                 }
             }
 
-            $cardsCount = Game::findOrFail($session->game_id)->cards()->count();
+            // ✅ FIX: Use the deck from session state, not universal card count
+            $deck = $state['deck'] ?? [];
             $drawn = $state['drawn'] ?? [];
 
-            if (count($drawn) >= $cardsCount) {
+            if (count($drawn) >= count($deck)) {
                 return response()->json(['error' => 'All cards drawn'], 400);
             }
 
-            for ($i = 0; $i < $cardsCount; $i++) {
-                if (!in_array($i, $drawn)) {
-                    $drawn[] = $i;
-                    break;
-                }
-            }
+            // ✅ FIX: Draw from the deck array, not sequential indices
+            $availableCards = array_diff($deck, $drawn);
+            $nextCardIndex = array_values($availableCards)[0]; // Get first available card
+            $drawn[] = $nextCardIndex;
 
             $state['drawn'] = $drawn;
             $state['status'] = 'playing';
@@ -372,5 +376,11 @@ class PlaySessionController extends Controller
         $session->delete();
 
         return response()->json(['success' => true, 'message' => 'Session deleted']);
+    }
+
+    // 📇 Get cards for game with rules
+    public function cards(Game $game)
+    {
+        return response()->json($game->getCardsWithRules());
     }
 }
