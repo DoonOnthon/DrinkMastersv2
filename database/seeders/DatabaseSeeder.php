@@ -16,9 +16,9 @@ class DatabaseSeeder extends Seeder
     {
         User::factory(10)->create();
 
-
         $this->call([
-            CardSeeder::class,
+            UniversalCardSeeder::class,  // Create universal deck first
+            KingsCupRulesSeeder::class,  // Then add rules for King's Cup
         ]);
 
         User::firstOrCreate(
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
 
         Game::insert([
             [
-                'title' => 'Kings Cup',
+                'title' => "King's Cup",
                 'type' => 'card',
                 'description' => 'Classic card-based drinking game',
                 'created_at' => now(),

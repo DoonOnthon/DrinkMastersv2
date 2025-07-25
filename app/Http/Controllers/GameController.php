@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Models\Card;
+use Illuminate\Support\Facades\Log;
 
 use Inertia\Inertia;
 
@@ -42,10 +43,21 @@ class GameController extends Controller
         ]);
     }
 
-    public function cards($id)
+    public function cards(Game $game)
     {
-        $game = Game::with('cards')->findOrFail($id);
-        return response()->json($game->cards);
+        Log::info('GameController::cards called', [
+            'game_id' => $game->id,
+            'game_title' => $game->title
+        ]);
+
+        $cardsWithRules = $game->getCardsWithRules();
+
+        Log::info('Cards with rules generated', [
+            'count' => count($cardsWithRules),
+            'first_card_action' => $cardsWithRules[0]->action_text ?? 'null'
+        ]);
+
+        return response()->json($cardsWithRules);
     }
     public function play($id)
     {

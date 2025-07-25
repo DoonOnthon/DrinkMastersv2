@@ -487,12 +487,18 @@ const fetchSession = async () => {
 
 const fetchCards = async () => {
     try {
+        console.log('🔍 Fetching cards for game:', props.session.game.id)
         const res = await axios.get(`/games/${props.session.game.id}/cards`)
-        const fullDeck = res.data
-        const deckOrder = session.value.state?.deck || []
-        cards.value = deckOrder.map(id => fullDeck.find(c => c.id === id))
+        console.log('🔍 Raw response:', res.data)
+
+        cards.value = res.data
+
+        console.log('📇 Loaded cards:', cards.value.length)
+        console.log('📇 First card:', cards.value[0])
+        console.log('📇 Cards remaining calculation:', cardsRemaining.value)
     } catch (error) {
-        console.error('Failed to fetch cards:', error)
+        console.error('❌ Failed to fetch cards:', error)
+        console.error('❌ Error response:', error.response)
     }
 }
 
@@ -536,11 +542,15 @@ const drawCard = async () => {
         const drawRes = await axios.post(`/play/${session.value.code}/draw`)
         console.log('🃏 Draw response:', drawRes.data)
 
-        // Get the drawn card data immediately
+        // ✅ FIX: Get the drawn card correctly
         const drawnIndexes = drawRes.data.drawn
         const newCardIndex = drawnIndexes[drawnIndexes.length - 1]
+
+        // The newCardIndex is now the index in the cards array
         lastDrawnCard.value = cards.value[newCardIndex]
         lastDrawnBy.value = currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone')
+
+        console.log('🃏 Drew card:', lastDrawnCard.value)
 
         // 🎬 Start the flying animation - card flies FROM deck position
         isDrawing.value = false

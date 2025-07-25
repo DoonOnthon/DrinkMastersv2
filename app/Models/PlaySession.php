@@ -45,9 +45,9 @@ class PlaySession extends Model
     // Check if deck is finished
     public function isDeckFinished()
     {
-        $drawn = $this->state['drawn'] ?? [];
-        $totalCards = $this->game->cards()->count();
-        return count($drawn) >= $totalCards;
+        $deck = $this->state['deck'] ?? [];
+        $drawnCount = count($this->state['drawn'] ?? []);
+        return $drawnCount >= count($deck);
     }
 
     // Relationships
