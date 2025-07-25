@@ -17,7 +17,7 @@
                 </div>
             </div>
 
-            <!-- 🚨 XP Incentive Banner (NO PULSING) -->
+            <!-- 🚨 XP Incentive Banner -->
             <div v-if="session.state?.mode === 'multiplayer' && !auth?.user"
                  class="mx-6 mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black p-3 rounded-2xl text-center font-bold shadow-2xl">
                 <div class="text-lg mb-2">⚡ EARN XP & CLIMB THE LEADERBOARD! ⚡</div>
@@ -26,7 +26,52 @@
                 </a>
             </div>
 
-            <!-- 🙋 Player Management - BEFORE first card OR compact top-left -->
+            <!-- 📋 CUSTOM RULES DISPLAY -->
+            <div v-if="customRules.length > 0" class="px-6 py-4">
+                <div class="text-center mb-3">
+                    <button
+                        @click="showCustomRules = !showCustomRules"
+                        class="bg-gradient-to-r from-yellow-500 to-orange-600 text-black px-4 py-2 rounded-full font-bold hover:scale-105 transition-transform shadow-lg"
+                    >
+                        📜 House Rules ({{ customRules.length }})
+                        <span class="ml-1">{{ showCustomRules ? '▼' : '▲' }}</span>
+                    </button>
+                </div>
+
+                <div v-if="showCustomRules" class="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-yellow-400/30">
+                    <div class="text-center text-yellow-400 font-bold mb-3 text-lg">
+                        🏠 Active House Rules
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                        <div
+                            v-for="(rule, index) in customRules"
+                            :key="index"
+                            class="bg-gradient-to-r from-yellow-400/20 to-orange-500/20 backdrop-blur-sm rounded-xl p-3 border border-yellow-400/40"
+                        >
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="text-yellow-400 font-bold text-sm mb-1">
+                                        Rule #{{ index + 1 }} by {{ rule.createdBy }}
+                                    </div>
+                                    <div class="text-white text-sm leading-relaxed">
+                                        {{ rule.text }}
+                                    </div>
+                                </div>
+                                <button
+                                    v-if="isHost"
+                                    @click="removeCustomRule(index)"
+                                    class="ml-2 text-red-400 hover:text-red-300 text-xs opacity-70 hover:opacity-100 transition-opacity"
+                                    title="Remove this rule"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🙋 Player Management -->
             <div v-if="session.state?.mode === 'host' && isHost">
                 <!-- Show prominently BEFORE any cards are drawn -->
                 <div v-if="!hasAnyCardsBeenDrawn" class="px-6 mb-4">
@@ -87,7 +132,7 @@
                 </div>
             </div>
 
-            <!-- 🎯 Turn Indicator (COMPACT) -->
+            <!-- 🎯 Turn Indicator -->
             <div v-if="session.players?.length > 0" class="px-6 mb-4">
                 <div class="text-center mb-3">
                     <div class="inline-block bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2 rounded-full shadow-xl">
@@ -95,7 +140,7 @@
                     </div>
                 </div>
 
-                <!-- SMALLER Turn Circle -->
+                <!-- Turn Circle -->
                 <div class="flex justify-center">
                     <div class="turn-circle-compact">
                         <div v-for="(player, index) in orderedPlayers" :key="player.id"
@@ -120,23 +165,22 @@
                     </div>
                 </div>
 
-                <!-- Host/Player Status (COMPACT) -->
+                <!-- Host/Player Status -->
                 <div class="text-center mt-3">
-                    <div class="mt-tiny-move">
-                    <div v-if="session.state?.mode === 'host' && isHost" class="inline-block bg-gradient-to-r from-orange-400 to-red-500 text-black px-4 py-1 rounded-full font-bold text-sm">
-                        👑 You control for {{ currentPlayer?.name || 'Unknown' }}
-                    </div>
-                    <div v-else-if="session.state?.mode === 'multiplayer' && isMyTurn" class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 text-black px-4 py-1 rounded-full font-bold text-sm">
-                        ✨ YOUR TURN! ✨
-                    </div>
+                    <div class="mt-6">
+                        <div v-if="session.state?.mode === 'host' && isHost" class="inline-block bg-gradient-to-r from-orange-400 to-red-500 text-black px-4 py-1 rounded-full font-bold text-sm">
+                            👑 You control for {{ currentPlayer?.name || 'Unknown' }}
+                        </div>
+                        <div v-else-if="session.state?.mode === 'multiplayer' && isMyTurn" class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 text-black px-4 py-1 rounded-full font-bold text-sm">
+                            ✨ YOUR TURN! ✨
+                        </div>
                     </div>
                 </div>
             </div>
 
-
-            <!-- 🃏 Card Drawing Area (FIXED LAYOUT) -->
+            <!-- 🃏 Card Drawing Area -->
             <div class="px-6">
-                <!-- Draw Pile (ALWAYS IN SAME POSITION) -->
+                <!-- Draw Pile -->
                 <div class="flex justify-center items-center gap-6">
                     <!-- Draw Pile Container -->
                     <div class="draw-pile-container">
@@ -196,7 +240,7 @@
                     </div>
                 </div>
 
-                <!-- ✨ FLOATING CARD DISPLAY (APPEARS ABOVE DECK) -->
+                <!-- ✨ FLOATING CARD DISPLAY -->
                 <div v-if="justDrewCard && lastDrawnCard"
                      class="floating-card-overlay">
                     <div class="floating-card-container">
@@ -206,7 +250,7 @@
                         </div>
 
                         <div class="flex justify-center">
-                            <!-- ✨ Card that flies from deck position -->
+                            <!-- Card that flies from deck position -->
                             <div class="drawn-card-container-compact"
                                  :class="{ 'card-flying': isCardFlying, 'card-landed': hasCardLanded }"
                                  @click="!flippedCurrent && (flippedCurrent = true)">
@@ -240,22 +284,48 @@
                                     </div>
                                 </div>
 
-                                <!-- ✨ Subtle glow when card lands -->
+                                <!-- Subtle glow when card lands -->
                                 <div v-if="hasCardLanded" class="card-landing-glow"></div>
                             </div>
                         </div>
 
                         <div v-if="flippedCurrent" class="text-center mt-3">
+                            <!-- 🎯 CUSTOM RULE INPUT for "Make a rule" cards -->
+                            <div v-if="lastDrawnCard.requires_input" class="mb-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-yellow-400/50">
+                                <div class="text-yellow-400 font-bold mb-2 text-lg">
+                                    ✨ Create Your Rule ✨
+                                </div>
+                                <input
+                                    v-model="customRule"
+                                    placeholder="Enter your custom rule..."
+                                    class="w-full bg-white/20 border border-white/30 px-4 py-3 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 text-center font-medium"
+                                    @keyup.enter="saveCustomRule"
+                                />
+                                <div class="text-xs text-yellow-300 mt-2 italic">
+                                    💡 Examples: "No saying names", "Drink with left hand only", "Everyone must rhyme"
+                                </div>
+
+                                <!-- Save Rule Button -->
+                                <button
+                                    v-if="customRule.trim()"
+                                    @click="saveCustomRule"
+                                    class="mt-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform shadow-lg"
+                                >
+                                    📝 Save Rule
+                                </button>
+                            </div>
+
+                            <!-- Regular finalize button -->
                             <button @click="finalizeCard" class="finalize-button-compact">
                                 <span class="text-lg">🍻</span>
-                                <span class="ml-2">Done Drinking! Next Turn</span>
+                                <span class="ml-2">{{ lastDrawnCard.requires_input && !hasAddedCustomRule ? 'Skip Rule & Continue' : 'Done! Next Turn' }}</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 🧩 Card History (COMPACT, BOTTOM) -->
+            <!-- 🧩 Card History -->
             <div v-if="drawHistory.length > 0" class="px-6 py-4 mt-6">
                 <div class="text-center mb-3">
                     <button @click="showHistory = !showHistory"
@@ -276,7 +346,7 @@
                 </div>
             </div>
 
-            <!-- Game Status Messages (COMPACT) -->
+            <!-- Game Status Messages -->
             <div v-if="session.completed_at" class="mx-6 mt-4 bg-gradient-to-r from-green-600 to-emerald-700 text-white p-3 rounded-xl text-center">
                 <div class="text-lg mb-1">🎉 Game Completed! 🎉</div>
                 <div class="text-xs opacity-90">Session will be automatically cleaned up in 1 hour</div>
@@ -321,6 +391,7 @@ const props = defineProps({
 
 const layout = computed(() => props.auth?.user ? AuthenticatedLayout : AppLayout)
 
+// Core reactive state
 const session = ref(props.session)
 const cards = ref([])
 const playerName = ref('')
@@ -334,15 +405,20 @@ const drawHistory = ref([])
 const showPlayerManager = ref(false)
 const showHistory = ref(false)
 
-// ✨ Animation state variables
+// Custom rules functionality
+const customRule = ref('')
+const customRules = ref([])
+const showCustomRules = ref(false)
+const hasAddedCustomRule = ref(false)
+
+// Animation state
 const isDrawing = ref(false)
 const isCardFlying = ref(false)
 const hasCardLanded = ref(false)
-const showParticles = ref(false)
 const flipCountdown = ref(0)
 let flipTimer = null
 
-// ✅ Check if any cards have been drawn
+// Computed properties
 const hasAnyCardsBeenDrawn = computed(() => {
     return (session.value?.state?.drawn?.length || 0) > 0
 })
@@ -390,7 +466,7 @@ const isDeckFinished = computed(() => {
     return drawnCount >= totalCards
 })
 
-// ✅ Compact position calculation
+// Helper functions
 const getPlayerPositionCompact = (index, total) => {
     const angle = (index * 360) / total - 90
     const radius = 80
@@ -403,22 +479,30 @@ const getPlayerPositionCompact = (index, total) => {
     }
 }
 
-// ✨ Particle animation helper
-const getParticleStyle = (index) => {
-    const angle = (index * 30) * Math.PI / 180
-    const distance = 100 + Math.random() * 50
-    const x = Math.cos(angle) * distance
-    const y = Math.sin(angle) * distance
+// Custom rule functions
+const saveCustomRule = () => {
+    if (!customRule.value.trim()) return
 
-    return {
-        '--particle-x': `${x}px`,
-        '--particle-y': `${y}px`,
-        '--delay': `${index * 0.1}s`,
-        animationDelay: `${index * 0.1}s`
+    const rule = {
+        text: customRule.value.trim(),
+        createdBy: currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone'),
+        cardValue: lastDrawnCard.value?.value,
+        cardLabel: lastDrawnCard.value?.label,
+        cardSuit: lastDrawnCard.value?.suit,
+        timestamp: new Date().toISOString()
     }
+
+    customRules.value.push(rule)
+    hasAddedCustomRule.value = true
+    customRule.value = ''
 }
 
-// ✅ Enhanced addPlayer function
+const removeCustomRule = (index) => {
+    if (!isHost.value) return
+    customRules.value.splice(index, 1)
+}
+
+// Player management
 const addPlayer = async () => {
     if (!playerName.value.trim()) return
 
@@ -432,6 +516,25 @@ const addPlayer = async () => {
     }
 }
 
+const join = async () => {
+    if (!playerName.value.trim()) return
+
+    try {
+        await axios.post(`/play/${props.session.code}/join`, { name: playerName.value })
+        localStorage.setItem(`name:${props.session.code}`, playerName.value)
+        hasJoined.value = true
+        await fetchSession()
+    } catch (error) {
+        if (error.response?.status === 401) {
+            alert('You need to be logged in to join multiplayer sessions!')
+            window.location.href = '/login'
+        } else {
+            alert(error.response?.data?.error || 'Failed to join session')
+        }
+    }
+}
+
+// Card functionality
 const finalizeCard = async () => {
     if (lastDrawnCard.value) {
         drawHistory.value.unshift({
@@ -440,41 +543,86 @@ const finalizeCard = async () => {
         })
     }
 
-    // Clear the current card
+    // Reset state
     lastDrawnCard.value = null
     lastDrawnBy.value = null
     justDrewCard.value = false
     flippedCurrent.value = false
+    hasAddedCustomRule.value = false
+    customRule.value = ''
 
-    // Auto-advance turn in host mode (only if multiple players)
-    if (session.value.state?.mode === 'host' && isHost.value && session.value.players?.length > 1) {
-        try {
-            console.log('🔄 Auto-advancing turn after card completion')
-            const turnRes = await axios.post(`/play/${session.value.code}/next-turn`)
-            console.log('🔄 Turn response:', turnRes.data)
-
-            await fetchSession()
-            console.log('🔄 New turn:', turn.value, 'New player:', currentPlayer.value?.name)
-        } catch (error) {
-            console.error('❌ Auto turn advancement failed:', error)
-        }
-    }
-
-    // In multiplayer mode, the player's turn should also advance automatically
-    if (session.value.state?.mode === 'multiplayer' && isMyTurn.value) {
-        try {
-            console.log('🔄 Auto-advancing turn after my card completion')
-            const turnRes = await axios.post(`/play/${session.value.code}/next-turn`)
-            console.log('🔄 Turn response:', turnRes.data)
-
-            await fetchSession()
-            console.log('🔄 New turn:', turn.value, 'New player:', currentPlayer.value?.name)
-        } catch (error) {
-            console.error('❌ Auto turn advancement failed:', error)
+    // Auto-advance turn
+    if ((session.value.state?.mode === 'host' && isHost.value) ||
+        (session.value.state?.mode === 'multiplayer' && isMyTurn.value)) {
+        if (session.value.players?.length > 1) {
+            try {
+                await axios.post(`/play/${session.value.code}/next-turn`)
+                await fetchSession()
+            } catch (error) {
+                console.error('Auto turn advancement failed:', error)
+            }
         }
     }
 }
 
+const drawCard = async () => {
+    if (!canDraw.value || isDrawing.value) return
+
+    try {
+        // Start animations
+        isDrawing.value = true
+        isCardFlying.value = false
+        hasCardLanded.value = false
+        flippedCurrent.value = false
+        flipCountdown.value = 0
+
+        // Deck shake animation
+        await new Promise(resolve => setTimeout(resolve, 800))
+
+        // Draw from backend
+        const drawRes = await axios.post(`/play/${session.value.code}/draw`)
+        const drawnIndexes = drawRes.data.drawn
+        const newCardIndex = drawnIndexes[drawnIndexes.length - 1]
+
+        lastDrawnCard.value = cards.value[newCardIndex]
+        lastDrawnBy.value = currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone')
+
+        // Flying animation
+        isDrawing.value = false
+        isCardFlying.value = true
+
+        // Show landed card
+        setTimeout(() => {
+            isCardFlying.value = false
+            justDrewCard.value = true
+            hasCardLanded.value = true
+        }, 800)
+
+        await fetchSession()
+
+        // Auto-flip countdown
+        setTimeout(() => {
+            if (!flippedCurrent.value) {
+                flipCountdown.value = 3
+                flipTimer = setInterval(() => {
+                    flipCountdown.value--
+                    if (flipCountdown.value <= 0) {
+                        clearInterval(flipTimer)
+                        flippedCurrent.value = true
+                    }
+                }, 1000)
+            }
+        }, 1500)
+
+    } catch (e) {
+        isDrawing.value = false
+        isCardFlying.value = false
+        justDrewCard.value = false
+        alert('Something went wrong: ' + (e.response?.data?.error || e.message))
+    }
+}
+
+// Session management
 const fetchSession = async () => {
     try {
         const { data } = await axios.get(`/api/play/${props.session.code}`)
@@ -487,126 +635,24 @@ const fetchSession = async () => {
 
 const fetchCards = async () => {
     try {
-        console.log('🔍 Fetching cards for game:', props.session.game.id)
         const res = await axios.get(`/games/${props.session.game.id}/cards`)
-        console.log('🔍 Raw response:', res.data)
-
         cards.value = res.data
-
-        console.log('📇 Loaded cards:', cards.value.length)
-        console.log('📇 First card:', cards.value[0])
-        console.log('📇 Cards remaining calculation:', cardsRemaining.value)
     } catch (error) {
-        console.error('❌ Failed to fetch cards:', error)
-        console.error('❌ Error response:', error.response)
+        console.error('Failed to fetch cards:', error)
     }
 }
 
-const join = async () => {
-    if (!playerName.value.trim()) return
-
-    try {
-        await axios.post(`/play/${props.session.code}/join`, { name: playerName.value })
-        localStorage.setItem(`name:${props.session.code}`, playerName.value)
-        hasJoined.value = true
-        await fetchSession()
-    } catch (error) {
-        console.error('Join failed:', error)
-        if (error.response?.status === 401) {
-            alert('You need to be logged in to join multiplayer sessions!')
-            window.location.href = '/login'
-        } else {
-            alert(error.response?.data?.error || 'Failed to join session')
-        }
-    }
-}
-
-// ✨ Enhanced draw card function with PROPER deck-to-center animation
-const drawCard = async () => {
-    if (!canDraw.value || isDrawing.value) return
-
-    try {
-        // 🎬 Start drawing animation
-        isDrawing.value = true
-        isCardFlying.value = false
-        hasCardLanded.value = false
-        flippedCurrent.value = false
-        flipCountdown.value = 0
-
-        console.log('🎯 Before draw - Current turn:', turn.value, 'Current player:', currentPlayer.value?.name)
-
-        // 🎬 Wait for deck shake animation
-        await new Promise(resolve => setTimeout(resolve, 800))
-
-        // Draw the card from backend
-        const drawRes = await axios.post(`/play/${session.value.code}/draw`)
-        console.log('🃏 Draw response:', drawRes.data)
-
-        // ✅ FIX: Get the drawn card correctly
-        const drawnIndexes = drawRes.data.drawn
-        const newCardIndex = drawnIndexes[drawnIndexes.length - 1]
-
-        // The newCardIndex is now the index in the cards array
-        lastDrawnCard.value = cards.value[newCardIndex]
-        lastDrawnBy.value = currentPlayer.value?.name || (isHost.value ? 'Host' : 'Someone')
-
-        console.log('🃏 Drew card:', lastDrawnCard.value)
-
-        // 🎬 Start the flying animation - card flies FROM deck position
-        isDrawing.value = false
-        isCardFlying.value = true
-
-        // 🎬 After flying animation completes, show the landed card
-        setTimeout(() => {
-            isCardFlying.value = false
-            justDrewCard.value = true
-            hasCardLanded.value = true
-        }, 800) // Match the cardFlyFromDeck animation duration
-
-        // Refresh session after animation
-        await fetchSession()
-
-        // 🎬 Auto-flip countdown
-        setTimeout(() => {
-            if (!flippedCurrent.value) {
-                flipCountdown.value = 3
-                flipTimer = setInterval(() => {
-                    flipCountdown.value--
-                    if (flipCountdown.value <= 0) {
-                        clearInterval(flipTimer)
-                        flippedCurrent.value = true
-                    }
-                }, 1000)
-            }
-        }, 1500) // Start countdown after card has landed
-
-    } catch (e) {
-        isDrawing.value = false
-        isCardFlying.value = false
-        justDrewCard.value = false
-        console.error('❌ Draw failed:', e.response?.data || e.message)
-        alert('Something went wrong: ' + (e.response?.data?.error || e.message))
-    }
-}
-
-// New function for host to advance turns manually
 const advanceTurn = async () => {
     if (!isHost.value) return
 
     try {
-        console.log('🔄 Host advancing turn from:', turn.value)
-        const turnRes = await axios.post(`/play/${session.value.code}/next-turn`)
-        console.log('🔄 Turn response:', turnRes.data)
-
+        await axios.post(`/play/${session.value.code}/next-turn`)
         await fetchSession()
-        console.log('🔄 New turn:', turn.value, 'New player:', currentPlayer.value?.name)
     } catch (error) {
-        console.error('❌ Turn advancement failed:', error)
         alert('Failed to advance turn: ' + (error.response?.data?.error || error.message))
     }
 }
 
-// Add end session function
 const endSession = async () => {
     if (!isHost.value) return
 
@@ -614,12 +660,11 @@ const endSession = async () => {
         await axios.post(`/play/${session.value.code}/end`)
         await fetchSession()
     } catch (error) {
-        console.error('Failed to end session:', error)
         alert('Failed to end session: ' + (error.response?.data?.error || error.message))
     }
 }
 
-// Clean up timer when component unmounts
+// Lifecycle
 onUnmounted(() => {
     if (flipTimer) clearInterval(flipTimer)
 })
@@ -851,7 +896,7 @@ onMounted(async () => {
     background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
 }
 
-/* Finalize Button */
+/* Buttons */
 .finalize-button {
     @apply bg-gradient-to-r from-pink-500 to-rose-600 text-white px-8 py-4 rounded-full text-xl font-bold shadow-2xl hover:scale-105 transition-transform;
 }
@@ -913,26 +958,32 @@ onMounted(async () => {
     @apply text-xs opacity-90 leading-relaxed;
 }
 
-/* ✨ CARD DRAWING ANIMATIONS */
+.card-landing-glow {
+    @apply absolute inset-0 rounded-3xl;
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 70%);
+    animation: landingGlow 1s ease-out;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Floating Card Overlay */
+.floating-card-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    animation: overlayFadeIn 0.3s ease-out;
+}
+
+.floating-card-container {
+    @apply relative z-50;
+    animation: cardDropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Animations */
 @keyframes shake {
     0%, 100% { transform: translateX(0) rotate(0deg); }
     25% { transform: translateX(-2px) rotate(-1deg); }
     75% { transform: translateX(2px) rotate(1deg); }
-}
-
-@keyframes cardFly {
-    0% {
-        transform: translateY(200px) translateX(0) scale(0.6) rotate(-5deg);
-        opacity: 0;
-    }
-    20% {
-        transform: translateY(100px) translateX(0) scale(0.8) rotate(-2deg);
-        opacity: 0.5;
-    }
-    100% {
-        transform: translateY(0) translateX(0) scale(1) rotate(0deg);
-        opacity: 1;
-    }
 }
 
 @keyframes cardFlyFromDeck {
@@ -958,12 +1009,6 @@ onMounted(async () => {
     }
 }
 
-@keyframes cardLand {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
 @keyframes superGlow {
     0%, 100% {
         opacity: 0.5;
@@ -986,17 +1031,6 @@ onMounted(async () => {
     }
 }
 
-@keyframes particleExplode {
-    0% {
-        transform: translate(0, 0) scale(1);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(var(--particle-x), var(--particle-y)) scale(0);
-        opacity: 0;
-    }
-}
-
 @keyframes landingGlow {
     0% {
         opacity: 0;
@@ -1012,76 +1046,6 @@ onMounted(async () => {
     }
 }
 
-/* ✨ ANIMATION CLASSES */
-.shake-animation {
-    animation: shake 0.5s ease-in-out infinite;
-}
-
-.drawing-animation {
-    animation: drawingPulse 1s ease-in-out infinite;
-}
-
-.super-glow {
-    animation: superGlow 0.5s ease-in-out infinite;
-}
-
-.card-flying {
-    animation: cardFly 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    z-index: 100;
-}
-
-.card-landed {
-    animation: cardLand 0.4s ease-out;
-}
-
-.magic-particles {
-    @apply absolute inset-0 pointer-events-none;
-    z-index: 200;
-}
-
-.particle {
-    @apply absolute top-1/2 left-1/2 text-2xl;
-    animation: particleExplode 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.card-landing-glow {
-    @apply absolute inset-0 rounded-3xl;
-    background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 70%);
-    animation: landingGlow 1s ease-out;
-    pointer-events: none;
-    z-index: -1;
-}
-
-/* ✨ FLOATING CARD OVERLAY */
-.floating-card-overlay {
-    @apply fixed inset-0 z-50 flex items-center justify-center;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(4px);
-    animation: overlayFadeIn 0.3s ease-out;
-}
-
-.floating-card-container {
-    @apply relative z-50;
-    animation: cardDropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* ✨ ENHANCED CARD FLYING ANIMATION */
-.card-just-drawn {
-    animation: cardFlyFromDeck 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    z-index: 100;
-}
-
-.card-being-drawn {
-    @apply opacity-30;
-    transition: opacity 0.3s ease;
-}
-
-.draw-pile.dimmed {
-    @apply opacity-40;
-    transition: opacity 0.3s ease;
-}
-
-/* ✨ OVERLAY ANIMATIONS */
 @keyframes overlayFadeIn {
     0% {
         opacity: 0;
@@ -1104,7 +1068,25 @@ onMounted(async () => {
     }
 }
 
-/* ✨ Card appearance animation in overlay */
+@keyframes mysteryGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Animation Classes */
+.shake-animation {
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+.drawing-animation {
+    animation: drawingPulse 1s ease-in-out infinite;
+}
+
+.super-glow {
+    animation: superGlow 0.5s ease-in-out infinite;
+}
+
 .card-flying {
     animation: cardAppearInOverlay 0.3s ease-out forwards;
     z-index: 100;

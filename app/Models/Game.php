@@ -31,7 +31,7 @@ class Game extends Model
             ->get()
             ->keyBy('card_value');
 
-        \Log::info('Game rules loaded with explicit ID', [
+        Log::info('Game rules loaded with explicit ID', [
             'game_id' => $gameId,
             'rules_count' => $gameRules->count(),
             'rule_keys' => $gameRules->keys()->toArray()
@@ -48,7 +48,7 @@ class Game extends Model
 
             // ✅ DEBUG: Log failed matches with more context
             if (!$rule) {
-                \Log::warning('No rule found for card', [
+                Log::warning('No rule found for card', [
                     'game_id' => $gameId,
                     'card_value' => $card->value,
                     'card_value_type' => gettype($card->value),
@@ -68,7 +68,8 @@ class Game extends Model
                 'rule_name' => $rule ? $rule->name : null,
                 'rule_description' => $rule ? $rule->description : null,
                 'category' => $rule ? $rule->category : null,
-                'intensity' => $rule ? $rule->intensity : 'medium'
+                'intensity' => $rule ? $rule->intensity : 'medium',
+                'requires_input' => $rule ? $rule->requires_input : false // ✅ Add this
             ];
         })->toArray();
     }
